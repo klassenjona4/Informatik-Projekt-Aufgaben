@@ -615,7 +615,7 @@ import { initializeApp } from "firebase/app";
 const firebaseConfig = {
   apiKey: "AIzaSyBvKcqMRND174AWHPq7J2Ftc_CIdXT_Jto",
   authDomain: "informatik-projekt-aufgaben.firebaseapp.com",
-  databaseURL: "https://console.firebase.google.com/project/informatik-projekt-aufgaben/database/informatik-projekt-aufgaben-default-rtdb/data/~2F",
+  databaseURL: "https://informatik-projekt-aufgaben-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "informatik-projekt-aufgaben",
   storageBucket: "informatik-projekt-aufgaben.firebasestorage.app",
   messagingSenderId: "975842729955",
@@ -629,7 +629,7 @@ import { getDatabase, ref, onValue, set, push,
          goOnline, goOffline, onDisconnect }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ── Konfiguration prüfen ────────────────────────────────────
-const isConfigured = FIREBASE_CONFIG.apiKey !== "AIzaSyBvKcqMRND174AWHPq7J2Ftc_CIdXT_Jto";
+const isConfigured = FIREBASE_CONFIG.apiKey !== "DEIN_API_KEY";
 
 if (!isConfigured) {
   document.getElementById('loading-screen').classList.add('hidden');
