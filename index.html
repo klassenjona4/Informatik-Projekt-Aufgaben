@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aufgaben</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:           #F7F5F2;
+      --surface:      #FFFFFF;
+      --border:       #E8E4DF;
+      --text-primary: #1A1814;
+      --text-muted:   #8C8882;
+      --accent:       #BFA27A;
+      --accent-dark:  #9C8258;
+      --shadow-sm:    0 1px 4px rgba(0,0,0,0.05), 0 2px 12px rgba(0,0,0,0.04);
+      --shadow-md:    0 4px 20px rgba(0,0,0,0.08);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,0.10);
+      --radius:       12px;
+      --tr:           0.18s ease;
+      --font-d:       'Cormorant Garamond', Georgia, serif;
+      --font-b:       'DM Sans', system-ui, sans-serif;
+      --folder-hue:   #BFA27A;
+      --folder-light: #F5EDE1;
+      --folder-text:  #7A5A30;
+      --s-todo: #6B8CAE;
+      --s-wip:  #C49A6C;
+      --s-done: #7BA688;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-b);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      opacity: 0.018;
+      pointer-events: none;
+      z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ── SYNC-INDIKATOR ─────────────────────────────────── */
+    #sync-status {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 7px;
+      z-index: 999;
+      transition: opacity 0.3s;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #sync-status.visible { opacity: 1; }
+    .sync-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--s-done);
+      animation: pulse 1.4s ease infinite;
+    }
+    .sync-dot.syncing { background: var(--s-wip); }
+    .sync-dot.error   { background: #c0392b; animation: none; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ── LADE-SCREEN ────────────────────────────────────── */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 500;
+      transition: opacity 0.4s;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+    .loading-logo {
+      font-family: var(--font-d);
+      font-size: 32px; font-weight: 600;
+    }
+    .loading-logo em { font-style: italic; color: var(--accent); }
+    .loading-spinner {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-sub { font-size: 12px; color: var(--text-muted); letter-spacing: 0.06em; }
+
+    /* ── SETUP-BANNER (wenn keine Config) ───────────────── */
+    #setup-banner {
+      display: none;
+      background: #FFF8ED;
+      border-bottom: 1px solid #F0DFC0;
+      padding: 14px 36px;
+      font-size: 13px;
+      color: #7A5A30;
+      align-items: center;
+      gap: 10px;
+    }
+    #setup-banner.visible { display: flex; }
+    #setup-banner strong { font-weight: 500; }
+    #setup-banner a { color: var(--accent-dark); text-decoration: underline; cursor: pointer; }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 36px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 100;
+      gap: 16px;
+    }
+    .header-left  { display: flex; align-items: center; gap: 16px; }
+    .header-right {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .header-date {
+      font-size: 12px; color: var(--text-muted);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* Online-Indikator im Header */
+    .online-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 9px;
+    }
+    .online-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--s-done);
+    }
+    .online-dot.offline { background: #c0392b; }
+
+    .logo {
+      font-family: var(--font-d);
+      font-size: 26px; font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+    .logo em { font-style: italic; color: var(--accent); }
+
+    .breadcrumb {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .breadcrumb-sep { opacity: 0.4; }
+    .breadcrumb-folder {
+      font-weight: 500; color: var(--folder-hue);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .breadcrumb-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--folder-hue); flex-shrink: 0;
+    }
+
+    .btn-back {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-b); font-size: 13px; font-weight: 400;
+      color: var(--text-muted);
+      padding: 6px 10px; border-radius: 6px;
+      transition: background var(--tr), color var(--tr);
+    }
+    .btn-back:hover { background: var(--border); color: var(--text-primary); }
+    .btn-back svg  { width: 14px; height: 14px; }
+
+    /* ── VIEWS ──────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── ORDNER-ÜBERSICHT ───────────────────────────────── */
+    #view-folders { padding: 40px 36px 60px; }
+
+    .folders-header {
+      display: flex; align-items: baseline;
+      justify-content: space-between; gap: 20px;
+      margin-bottom: 32px;
+    }
+    .folders-title {
+      font-family: var(--font-d);
+      font-size: 36px; font-weight: 600;
+      letter-spacing: -0.02em; line-height: 1;
+    }
+    .folders-title em { font-style: italic; color: var(--accent); }
+
+    .btn-new-folder {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      background: var(--text-primary); color: #fff;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: var(--font-b); font-size: 13px; font-weight: 400;
+      letter-spacing: 0.02em;
+      transition: opacity var(--tr), transform var(--tr);
+      white-space: nowrap;
+    }
+    .btn-new-folder:hover { opacity: 0.82; transform: translateY(-1px); }
+
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .folder-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer; overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: box-shadow var(--tr), transform var(--tr);
+      animation: fadeUp 0.22s ease both;
+    }
+    .folder-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+
+    .folder-stripe { height: 6px; width: 100%; }
+    .folder-body {
+      padding: 18px 20px 16px; flex: 1;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .folder-name-row {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 8px;
+    }
+    .folder-name {
+      font-family: var(--font-d);
+      font-size: 19px; font-weight: 600;
+      line-height: 1.2; flex: 1; word-break: break-word;
+    }
+    .folder-actions {
+      display: flex; gap: 4px;
+      opacity: 0; transition: opacity var(--tr);
+    }
+    .folder-card:hover .folder-actions { opacity: 1; }
+
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      width: 26px; height: 26px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--text-muted);
+      transition: background var(--tr), color var(--tr);
+    }
+    .btn-icon:hover { background: var(--bg); color: var(--text-primary); }
+    .btn-icon.danger:hover { background: #fdf0ee; color: #c0392b; }
+
+    .folder-meta {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .folder-pill {
+      font-size: 11px; font-weight: 400;
+      padding: 3px 9px; border-radius: 20px; letter-spacing: 0.03em;
+    }
+    .folder-col-count {
+      color: var(--text-muted); background: var(--bg); border: 1px solid var(--border);
+    }
+
+    /* ── MODAL ──────────────────────────────────────────── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(26,24,20,0.35);
+      backdrop-filter: blur(3px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 32px; width: 360px; max-width: 92vw;
+      animation: modalIn 0.18s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-title { font-family: var(--font-d); font-size: 22px; font-weight: 600; margin-bottom: 22px; }
+    .modal label {
+      display: block; font-size: 11px; font-weight: 500;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 7px;
+    }
+    .modal input[type="text"] {
+      width: 100%; padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px; font-family: var(--font-b);
+      font-size: 14px; font-weight: 400;
+      background: var(--bg); color: var(--text-primary);
+      outline: none; transition: border-color var(--tr);
+      margin-bottom: 20px;
+    }
+    .modal input[type="text"]:focus { border-color: var(--accent); }
+    .modal-color-section { margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    .btn-primary {
+      padding: 10px 22px;
+      background: var(--text-primary); color: #fff;
+      border: none; border-radius: 7px; cursor: pointer;
+      font-family: var(--font-b); font-size: 13px;
+      transition: opacity var(--tr);
+    }
+    .btn-primary:hover { opacity: 0.8; }
+
+    .btn-secondary {
+      padding: 10px 18px;
+      background: none; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 7px;
+      cursor: pointer; font-family: var(--font-b); font-size: 13px;
+      transition: background var(--tr), color var(--tr);
+    }
+    .btn-secondary:hover { background: var(--bg); color: var(--text-primary); }
+
+    .color-picker-row { display: flex; gap: 7px; flex-wrap: wrap; padding-top: 4px; }
+    .color-swatch {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid transparent; cursor: pointer;
+      transition: transform var(--tr), border-color var(--tr);
+    }
+    .color-swatch:hover { transform: scale(1.2); }
+    .color-swatch.active { border-color: var(--text-primary); }
+
+    /* ── BOARD ──────────────────────────────────────────── */
+    #view-board { display: none; }
+    #view-board.active {
+      display: flex; align-items: flex-start; gap: 18px;
+      padding: 28px 36px 60px;
+      overflow-x: auto;
+      min-height: calc(100vh - 74px);
+    }
+
+    .board-accent-bar {
+      position: fixed; top: 74px; left: 0; right: 0;
+      height: 3px; z-index: 99; transition: background var(--tr);
+    }
+
+    .column {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-sm);
+      min-width: 300px; max-width: 340px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      animation: fadeUp 0.2s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .column-top-bar {
+      height: 4px; border-radius: var(--radius) var(--radius) 0 0;
+      background: var(--folder-hue); opacity: 0.6;
+    }
+    .column-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px 12px; border-bottom: 1px solid var(--border);
+    }
+    .column-title {
+      font-family: var(--font-d); font-size: 18px; font-weight: 600;
+      border: none; background: transparent; outline: none;
+      color: var(--text-primary); flex: 1; cursor: text;
+      caret-color: var(--folder-hue);
+    }
+    .column-title::placeholder { color: var(--text-muted); }
+    .column-title:focus { border-bottom: 1px solid var(--folder-hue); }
+
+    .task-count {
+      font-size: 11px; color: var(--text-muted);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 2px 8px; flex-shrink: 0;
+    }
+    .btn-del-col {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 17px;
+      padding: 2px 4px; border-radius: 4px;
+      transition: color var(--tr), background var(--tr); flex-shrink: 0;
+    }
+    .btn-del-col:hover { color: #c0392b; background: #fdf0ee; }
+
+    .task-list {
+      padding: 10px 12px; display: flex; flex-direction: column;
+      gap: 7px; min-height: 36px;
+    }
+    .empty-hint {
+      font-size: 12px; color: #C5BFB7; font-style: italic;
+      text-align: center; padding: 6px 0 2px;
+    }
+    .btn-add-task {
+      display: flex; align-items: center; gap: 7px;
+      padding: 11px 16px; background: none; border: none;
+      border-top: 1px solid var(--border); cursor: pointer;
+      color: var(--text-muted); font-family: var(--font-b);
+      font-size: 12.5px; width: 100%; text-align: left;
+      transition: background var(--tr), color var(--tr);
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .btn-add-task:hover { background: var(--bg); color: var(--text-primary); }
+
+    /* ── AUFGABEN-KARTE ─────────────────────────────────── */
+    .task-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--tr), border-color var(--tr), opacity var(--tr);
+      animation: fadeUp 0.16s ease;
+    }
+    .task-card:hover { box-shadow: var(--shadow-md); border-color: #D8D3CC; }
+    .task-card.done  { opacity: 0.5; }
+    .task-card.done .task-text { text-decoration: line-through; color: var(--text-muted); }
+
+    .task-top { display: flex; align-items: flex-start; gap: 9px; }
+
+    .task-checkbox {
+      appearance: none; -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border: 1.5px solid #C5BFB7; border-radius: 4px;
+      cursor: pointer; flex-shrink: 0; margin-top: 2px;
+      background: var(--surface);
+      transition: background var(--tr), border-color var(--tr);
+      position: relative;
+    }
+    .task-checkbox:checked { background: var(--s-done); border-color: var(--s-done); }
+    .task-checkbox:checked::after {
+      content: '✓'; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%); color: #fff; font-size: 9px;
+    }
+
+    .task-text {
+      flex: 1; font-size: 13px; font-weight: 400; line-height: 1.5;
+      color: var(--text-primary); border: none; background: transparent;
+      outline: none; resize: none; font-family: var(--font-b); min-height: 19px;
+    }
+    .task-text::placeholder { color: #BBBAB5; }
+
+    .btn-del-task {
+      background: none; border: none; cursor: pointer;
+      color: #C5BFB7; font-size: 15px;
+      padding: 1px 3px; border-radius: 3px; flex-shrink: 0;
+      transition: color var(--tr);
+    }
+    .btn-del-task:hover { color: #c0392b; }
+
+    .task-bottom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .task-status {
+      appearance: none; -webkit-appearance: none;
+      border: none; border-radius: 20px; padding: 3px 10px;
+      font-family: var(--font-b); font-size: 10.5px; font-weight: 500;
+      letter-spacing: 0.04em; cursor: pointer; color: #fff;
+      background: var(--s-todo);
+      transition: background var(--tr), transform var(--tr);
+    }
+    .task-status:focus { outline: none; }
+    .task-status:hover { transform: scale(1.03); }
+    .task-status.wip  { background: var(--s-wip); }
+    .task-status.done { background: var(--s-done); }
+
+    .task-done-by {
+      font-size: 11px; font-weight: 300; color: var(--text-muted);
+      border: none; border-bottom: 1px dashed #D8D3CC;
+      background: transparent; outline: none;
+      padding: 2px 4px; min-width: 70px; max-width: 110px;
+      font-family: var(--font-b); transition: border-color var(--tr);
+    }
+    .task-done-by::placeholder { color: #BBBAB5; font-style: italic; }
+    .task-done-by:focus { border-bottom-color: var(--folder-hue); }
+
+    .btn-add-column {
+      min-width: 180px; height: fit-content;
+      background: transparent; border: 1.5px dashed #D0CBC3;
+      border-radius: var(--radius); padding: 20px 24px;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+      color: var(--text-muted); font-family: var(--font-b);
+      font-size: 12.5px; letter-spacing: 0.03em; flex-shrink: 0;
+      transition: border-color var(--tr), color var(--tr), background var(--tr);
+    }
+    .btn-add-column:hover {
+      border-color: var(--folder-hue); color: var(--folder-text);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D8D3CC; border-radius: 3px; }
+
+    @media (max-width: 600px) {
+      header, #view-folders { padding-left: 16px; padding-right: 16px; }
+      #view-board.active { padding: 20px 12px 40px; }
+      .folders-title { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Lade-Screen -->
+<div id="loading-screen">
+  <div class="loading-logo">Auf<em>gaben</em></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-sub">Verbinde mit Datenbank …</div>
+</div>
+
+<!-- Setup-Banner (erscheint wenn Firebase nicht konfiguriert) -->
+<div id="setup-banner">
+  ⚠️ <strong>Firebase nicht konfiguriert.</strong>
+  Öffne die Datei in einem Texteditor und trage deine Firebase-Konfiguration ein.
+  <a href="https://console.firebase.google.com" target="_blank">→ Firebase Console öffnen</a>
+</div>
+
+<!-- Sync-Indikator -->
+<div id="sync-status">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-text">Synchronisiert</span>
+</div>
+
+<!-- ── HEADER ──────────────────────────────────────────── -->
+<header>
+  <div class="header-left">
+    <div class="logo">Auf<em>gaben</em></div>
+    <nav class="breadcrumb" id="breadcrumb" style="display:none">
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-folder">
+        <span class="breadcrumb-dot" id="bc-dot"></span>
+        <span id="bc-name"></span>
+      </span>
+    </nav>
+    <button class="btn-back" id="btn-back" style="display:none" onclick="goHome()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M10 3L5 8l5 5"/>
+      </svg>
+      Ordner
+    </button>
+  </div>
+  <div class="header-right">
+    <div class="online-badge">
+      <div class="online-dot" id="online-dot"></div>
+      <span id="online-text">Online</span>
+    </div>
+    <div class="header-date" id="header-date"></div>
+  </div>
+</header>
+
+<div class="board-accent-bar" id="accent-bar" style="display:none"></div>
+
+<!-- ── VIEW: ORDNER ────────────────────────────────────── -->
+<div class="view active" id="view-folders">
+  <div class="folders-header">
+    <h1 class="folders-title">Meine <em>Fachbereiche</em></h1>
+    <button class="btn-new-folder" id="btn-new-folder">
+      <span style="font-size:17px;font-weight:300;line-height:1">+</span>
+      Neuer Ordner
+    </button>
+  </div>
+  <div class="folder-grid" id="folder-grid"></div>
+</div>
+
+<!-- ── VIEW: BOARD ─────────────────────────────────────── -->
+<div class="view" id="view-board"></div>
+
+<!-- ── MODAL ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Neuer Ordner</div>
+    <label for="modal-name-input">Name</label>
+    <input type="text" id="modal-name-input" placeholder="z.B. Mathematik, Film, Projekt A …" />
+    <div class="modal-color-section">
+      <label>Farbe</label>
+      <div class="color-picker-row" id="modal-color-row"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Abbrechen</button>
+      <button class="btn-primary" id="modal-confirm">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FIREBASE SDK (v10, modular via CDN) ─────────────── -->
+<script type="module">
+// ============================================================
+// ❗ FIREBASE KONFIGURATION
+// Ersetze die Werte unten mit deinen eigenen Firebase-Daten.
+// Du findest sie in der Firebase Console unter:
+// Projekteinstellungen → Deine Apps → Firebase SDK-Snippet
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBvKcqMRND174AWHPq7J2Ftc_CIdXT_Jto",
+  authDomain:        "informatik-projekt-aufgaben.firebaseapp.com",
+  databaseURL:       "https://informatik-projekt-aufgaben-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "informatik-projekt-aufgaben",
+  storageBucket:     "informatik-projekt-aufgaben.firebasestorage.app",
+  messagingSenderId: "975842729955",
+  appId:             "1:975842729955:web:e78df02be7a625b9c48ad6"
+};
+// ============================================================
+
+import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, push,
+         remove, update, serverTimestamp,
+         goOnline, goOffline, onDisconnect }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ── Konfiguration prüfen ────────────────────────────────────
+const isConfigured = FIREBASE_CONFIG.apiKey !== "AIzaSyBvKcqMRND174AWHPq7J2Ftc_CIdXT_Jto";
+
+if (!isConfigured) {
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('setup-banner').classList.add('visible');
+  // Fallback: lokaler Modus
+  initLocalMode();
+} else {
+  initFirebaseMode();
+}
+
+// ============================================================
+// FIREBASE MODUS
+// ============================================================
+function initFirebaseMode() {
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db  = getDatabase(app);
+  const boardRef = ref(db, 'board');
+
+  // Online/Offline-Status
+  const connRef = ref(db, '.info/connected');
+  onValue(connRef, snap => {
+    const online = snap.val() === true;
+    document.getElementById('online-dot').classList.toggle('offline', !online);
+    document.getElementById('online-text').textContent = online ? 'Online' : 'Offline';
+  });
+
+  // Echtzeit-Listener: Daten vom Server empfangen
+  let firstLoad = true;
+  onValue(boardRef, snap => {
+    const data = snap.val() || { folders: {} };
+    // Konvertiere Firebase-Objekte in Arrays
+    state.folders = objectToArray(data.folders || {});
+    state.folders.forEach(f => {
+      f.columns = objectToArray(f.columns || {});
+      f.columns.forEach(c => { c.tasks = objectToArray(c.tasks || {}); });
+    });
+
+    if (firstLoad) {
+      firstLoad = false;
+      hideLoading();
+    }
+
+    // UI aktualisieren
+    if (activeFolderId) {
+      const folder = state.folders.find(f => f.id === activeFolderId);
+      if (folder) renderBoard(folder);
+    } else {
+      renderFolders();
+    }
+  });
+
+  // Schreib-Funktion: gesamten State pushen
+  window.saveToFirebase = async () => {
+    showSyncing();
+    try {
+      // Konvertiere Arrays in Firebase-kompatible Objekte
+      const data = {
+        folders: arrayToObject(state.folders.map(f => ({
+          ...f,
+          columns: arrayToObject(f.columns.map(c => ({
+            ...c,
+            tasks: arrayToObject(c.tasks)
+          })))
+        })))
+      };
+      await set(boardRef, data);
+      showSynced();
+    } catch (e) {
+      console.error('Firebase write error:', e);
+      showSyncError();
+    }
+  };
+  window.save = window.saveToFirebase;
+}
+
+// ============================================================
+// LOKALER MODUS (Fallback ohne Firebase-Config)
+// ============================================================
+function initLocalMode() {
+  const raw = localStorage.getItem('aufgaben-v3');
+  if (raw) { try { state = JSON.parse(raw); } catch {} }
+  window.save = () => localStorage.setItem('aufgaben-v3', JSON.stringify(state));
+  hideLoading();
+  renderFolders();
+}
+
+// ============================================================
+// HILFSFUNKTIONEN: Array ↔ Firebase-Objekt
+// Firebase speichert keine Arrays, sondern Objekte mit IDs als Schlüssel
+// ============================================================
+function arrayToObject(arr) {
+  if (!arr) return {};
+  const obj = {};
+  arr.forEach(item => { if (item && item.id) obj[item.id] = item; });
+  return obj;
+}
+
+function objectToArray(obj) {
+  if (!obj) return [];
+  return Object.values(obj).sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+// ============================================================
+// SYNC-INDIKATOR
+// ============================================================
+let syncTimer = null;
+function showSyncing() {
+  const el = document.getElementById('sync-status');
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  el.classList.add('visible');
+  dot.className = 'sync-dot syncing';
+  txt.textContent = 'Synchronisiert …';
+  clearTimeout(syncTimer);
+}
+function showSynced() {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot';
+  txt.textContent = 'Gespeichert';
+  syncTimer = setTimeout(() => {
+    document.getElementById('sync-status').classList.remove('visible');
+  }, 2000);
+}
+function showSyncError() {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot error';
+  txt.textContent = 'Fehler beim Speichern';
+}
+
+function hideLoading() {
+  const ls = document.getElementById('loading-screen');
+  ls.classList.add('hidden');
+  setTimeout(() => ls.remove(), 500);
+}
+
+// ============================================================
+// STATE & FARBEN
+// ============================================================
+const COLORS = {
+  amber:      { hue: '#C49A6C', light: '#F7EDE0', text: '#7A5A30', label: 'Amber'      },
+  terracotta: { hue: '#C17B5A', light: '#F6EBE4', text: '#7A3E28', label: 'Terracotta' },
+  rose:       { hue: '#C2797A', light: '#F6E9E9', text: '#7A3335', label: 'Rose'       },
+  sage:       { hue: '#7BA688', light: '#E7F0EA', text: '#3D6147', label: 'Salbei'     },
+  teal:       { hue: '#5B9BA6', light: '#E2EFF1', text: '#27606B', label: 'Petrol'     },
+  slate:      { hue: '#6B8CAE', light: '#E5EDF5', text: '#2F4F6E', label: 'Schieferblau'},
+  lavender:   { hue: '#9B8BB4', light: '#EDE9F4', text: '#5C4880', label: 'Lavendel'  },
+  olive:      { hue: '#8A9A5B', light: '#EAF0DF', text: '#4A5A25', label: 'Olive'      },
+};
+
+let state = { folders: [] };
+let activeFolderId = null;
+let modalMode = 'create', modalEditId = null, modalSelectedColor = 'amber';
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function applyFolderColor(key) {
+  const c = COLORS[key] || COLORS.amber;
+  const r = document.documentElement.style;
+  r.setProperty('--folder-hue',   c.hue);
+  r.setProperty('--folder-light', c.light);
+  r.setProperty('--folder-text',  c.text);
+  document.getElementById('accent-bar').style.background = c.hue;
+}
+function resetFolderColor() {
+  const r = document.documentElement.style;
+  r.setProperty('--folder-hue',   '#BFA27A');
+  r.setProperty('--folder-light', '#F5EDE1');
+  r.setProperty('--folder-text',  '#7A5A30');
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+window.goHome = function() {
+  activeFolderId = null;
+  document.getElementById('view-folders').classList.add('active');
+  document.getElementById('view-board').classList.remove('active');
+  document.getElementById('breadcrumb').style.display  = 'none';
+  document.getElementById('btn-back').style.display    = 'none';
+  document.getElementById('accent-bar').style.display  = 'none';
+  resetFolderColor();
+  renderFolders();
+};
+
+function openFolder(id) {
+  const folder = state.folders.find(f => f.id === id);
+  if (!folder) return;
+  activeFolderId = id;
+  applyFolderColor(folder.color);
+  const c = COLORS[folder.color] || COLORS.amber;
+  document.getElementById('bc-dot').style.background = c.hue;
+  document.getElementById('bc-name').textContent     = folder.name;
+  document.getElementById('breadcrumb').style.display = 'flex';
+  document.getElementById('btn-back').style.display   = 'flex';
+  document.getElementById('accent-bar').style.display = 'block';
+  document.getElementById('view-folders').classList.remove('active');
+  document.getElementById('view-board').classList.add('active');
+  renderBoard(folder);
+}
+
+// ============================================================
+// ORDNER rendern
+// ============================================================
+function renderFolders() {
+  const grid = document.getElementById('folder-grid');
+  grid.innerHTML = '';
+
+  if (state.folders.length === 0) {
+    const hint = document.createElement('p');
+    hint.style.cssText = 'color:var(--text-muted);font-style:italic;font-size:14px;';
+    hint.textContent = 'Noch keine Ordner — erstelle deinen ersten Fachbereich.';
+    grid.appendChild(hint);
+    return;
+  }
+
+  state.folders.forEach((folder, i) => {
+    const c = COLORS[folder.color] || COLORS.amber;
+    const colCount  = folder.columns.length;
+    const taskCount = folder.columns.reduce((s, c) => s + c.tasks.length, 0);
+    const doneCount = folder.columns.reduce((s, c) =>
+      s + c.tasks.filter(t => t.checked).length, 0);
+
+    const card = document.createElement('div');
+    card.className = 'folder-card';
+    card.style.animationDelay = (i * 0.04) + 's';
+    card.innerHTML = `
+      <div class="folder-stripe" style="background:${c.hue}"></div>
+      <div class="folder-body">
+        <div class="folder-name-row">
+          <div class="folder-name">${escHtml(folder.name)}</div>
+          <div class="folder-actions">
+            <button class="btn-icon" title="Umbenennen" data-edit="${folder.id}">✎</button>
+            <button class="btn-icon danger" title="Löschen" data-del="${folder.id}">×</button>
+          </div>
+        </div>
+        <div class="folder-meta">
+          <span class="folder-pill folder-col-count">${colCount} Spalte${colCount!==1?'n':''}</span>
+          <span class="folder-pill" style="background:${c.light};color:${c.text};">${taskCount} Aufgabe${taskCount!==1?'n':''}</span>
+          ${doneCount > 0 ? `<span class="folder-pill" style="background:#E7F0EA;color:#3D6147;">✓ ${doneCount} erledigt</span>` : ''}
+        </div>
+      </div>`;
+
+    card.addEventListener('click', e => {
+      if (e.target.closest('[data-edit],[data-del]')) return;
+      openFolder(folder.id);
+    });
+    card.querySelector('[data-edit]').addEventListener('click', e => {
+      e.stopPropagation(); openModal('edit', folder.id);
+    });
+    card.querySelector('[data-del]').addEventListener('click', e => {
+      e.stopPropagation(); deleteFolder(folder.id);
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ============================================================
+// BOARD rendern
+// ============================================================
+function renderBoard(folder) {
+  const board = document.getElementById('view-board');
+  board.innerHTML = '';
+  folder.columns.forEach((col, i) => board.appendChild(buildColumn(folder, col, i)));
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-column';
+  addBtn.innerHTML = '<span style="font-size:18px;font-weight:300">+</span> Spalte hinzufügen';
+  addBtn.addEventListener('click', () => addColumn(folder.id));
+  board.appendChild(addBtn);
+}
+
+function buildColumn(folder, col, idx) {
+  const el = document.createElement('div');
+  el.className = 'column';
+  el.dataset.colId = col.id;
+  el.style.animationDelay = (idx * 0.05) + 's';
+
+  const topBar = document.createElement('div');
+  topBar.className = 'column-top-bar';
+
+  const header = document.createElement('div');
+  header.className = 'column-header';
+
+  const ti = document.createElement('input');
+  ti.className='column-title'; ti.type='text';
+  ti.placeholder='Spalten-Titel …'; ti.value=col.title;
+  ti.addEventListener('input', () => { col.title = ti.value; save(); });
+
+  const cnt = document.createElement('span');
+  cnt.className='task-count'; cnt.textContent=col.tasks.length;
+
+  const del = document.createElement('button');
+  del.className='btn-del-col'; del.title='Spalte löschen'; del.textContent='×';
+  del.addEventListener('click', () => deleteColumn(folder.id, col.id));
+
+  header.append(ti, cnt, del);
+
+  const list = document.createElement('div');
+  list.className = 'task-list';
+
+  if (col.tasks.length === 0) {
+    const h = document.createElement('p');
+    h.className='empty-hint'; h.textContent='Noch keine Aufgaben';
+    list.appendChild(h);
+  } else {
+    col.tasks.forEach(task => list.appendChild(buildTask(folder, col, task)));
+  }
+
+  const add = document.createElement('button');
+  add.className='btn-add-task';
+  add.innerHTML='<span style="font-size:15px;font-weight:300;line-height:1">+</span> Aufgabe';
+  add.addEventListener('click', () => addTaskToColumn(folder.id, col.id));
+
+  el.append(topBar, header, list, add);
+  return el;
+}
+
+function buildTask(folder, col, task) {
+  const card = document.createElement('div');
+  card.className = 'task-card' + (task.checked ? ' done' : '');
+
+  const top = document.createElement('div');
+  top.className = 'task-top';
+
+  const cb = document.createElement('input');
+  cb.type='checkbox'; cb.className='task-checkbox'; cb.checked=task.checked;
+  cb.addEventListener('change', () => {
+    task.checked = cb.checked;
+    task.status  = cb.checked ? 'done' : (task.status==='done' ? 'todo' : task.status);
+    save(); renderBoard(folder);
+  });
+
+  const ta = document.createElement('textarea');
+  ta.className='task-text'; ta.placeholder='Aufgabe beschreiben …';
+  ta.value=task.text; ta.rows=1; autoResize(ta);
+  ta.addEventListener('input', () => { task.text=ta.value; autoResize(ta); save(); });
+
+  const d = document.createElement('button');
+  d.className='btn-del-task'; d.title='Löschen'; d.textContent='×';
+  d.addEventListener('click', () => {
+    col.tasks = col.tasks.filter(t => t.id !== task.id); save(); renderBoard(folder);
+  });
+
+  top.append(cb, ta, d);
+
+  const bot = document.createElement('div');
+  bot.className='task-bottom';
+
+  const sel = document.createElement('select');
+  sel.className = 'task-status ' + (task.status==='wip'?'wip':task.status==='done'?'done':'');
+  [['todo','Zu erledigen'],['wip','In Arbeit'],['done','Erledigt']].forEach(([v,l]) => {
+    const o=document.createElement('option'); o.value=v; o.textContent=l;
+    if(v===task.status) o.selected=true; sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => {
+    task.status=sel.value; task.checked=task.status==='done';
+    if(task.status!=='done') task.checked=false;
+    save(); renderBoard(folder);
+  });
+
+  const db = document.createElement('input');
+  db.type='text'; db.className='task-done-by';
+  db.placeholder='Erledigt von …'; db.value=task.doneBy||'';
+  db.addEventListener('input', () => { task.doneBy=db.value; save(); });
+
+  bot.append(sel, db);
+  card.append(top, bot);
+  return card;
+}
+
+function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+
+// ============================================================
+// CRUD-AKTIONEN
+// ============================================================
+function deleteFolder(id) {
+  const f = state.folders.find(x=>x.id===id);
+  if (!f || !confirm(`Ordner „${f.name}" wirklich löschen?`)) return;
+  state.folders = state.folders.filter(x=>x.id!==id);
+  save(); renderFolders();
+}
+
+function addColumn(fid) {
+  const f = state.folders.find(x=>x.id===fid);
+  if (!f) return;
+  const col = { id:uid(), title:'', tasks:[], order: f.columns.length };
+  f.columns.push(col); save(); renderBoard(f);
+  setTimeout(() => {
+    document.querySelector(`.column[data-col-id="${col.id}"] .column-title`)?.focus();
+  }, 60);
+}
+
+function deleteColumn(fid, cid) {
+  const f = state.folders.find(x=>x.id===fid);
+  if (!f) return;
+  const c = f.columns.find(x=>x.id===cid);
+  if (!confirm(`Spalte „${c?.title||'diese Spalte'}" löschen?`)) return;
+  f.columns = f.columns.filter(x=>x.id!==cid); save(); renderBoard(f);
+}
+
+function addTaskToColumn(fid, cid) {
+  const f = state.folders.find(x=>x.id===fid);
+  const c = f?.columns.find(x=>x.id===cid);
+  if (!c) return;
+  const task = { id:uid(), text:'', status:'todo', checked:false, doneBy:'', order:c.tasks.length };
+  c.tasks.push(task); save(); renderBoard(f);
+  setTimeout(() => {
+    const cards = document.querySelector(`.column[data-col-id="${cid}"]`)?.querySelectorAll('.task-card');
+    cards?.[cards.length-1]?.querySelector('.task-text')?.focus();
+  }, 60);
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function buildColorSwatches(selected) {
+  const row = document.getElementById('modal-color-row');
+  row.innerHTML='';
+  Object.entries(COLORS).forEach(([key,c]) => {
+    const sw = document.createElement('button');
+    sw.className='color-swatch'+(key===selected?' active':'');
+    sw.style.background=c.hue; sw.title=c.label;
+    sw.addEventListener('click', () => {
+      row.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+      sw.classList.add('active'); modalSelectedColor=key;
+    });
+    row.appendChild(sw);
+  });
+}
+
+window.openModal = function(mode, editId=null) {
+  modalMode=mode; modalEditId=editId;
+  const inp=document.getElementById('modal-name-input');
+  const btn=document.getElementById('modal-confirm');
+
+  if (mode==='edit') {
+    const f=state.folders.find(x=>x.id===editId);
+    document.getElementById('modal-title').textContent='Ordner bearbeiten';
+    btn.textContent='Speichern'; inp.value=f?.name||'';
+    modalSelectedColor=f?.color||'amber';
+  } else {
+    document.getElementById('modal-title').textContent='Neuer Ordner';
+    btn.textContent='Erstellen'; inp.value='';
+    modalSelectedColor=Object.keys(COLORS)[state.folders.length%8];
+  }
+
+  buildColorSwatches(modalSelectedColor);
+  document.getElementById('modal-backdrop').classList.add('open');
+  setTimeout(()=>inp.focus(), 80);
+};
+
+window.closeModal = function() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+};
+
+function confirmModal() {
+  const name=document.getElementById('modal-name-input').value.trim();
+  if (!name) { document.getElementById('modal-name-input').focus(); return; }
+
+  if (modalMode==='create') {
+    state.folders.push({ id:uid(), name, color:modalSelectedColor, columns:[] });
+  } else {
+    const f=state.folders.find(x=>x.id===modalEditId);
+    if (f) { f.name=name; f.color=modalSelectedColor; }
+  }
+  save(); closeModal(); renderFolders();
+}
+
+document.getElementById('modal-confirm').addEventListener('click', confirmModal);
+document.getElementById('modal-name-input').addEventListener('keydown', e=>{ if(e.key==='Enter') confirmModal(); });
+document.getElementById('modal-backdrop').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('btn-new-folder').addEventListener('click', ()=>openModal('create'));
+
+// Datum
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('de-DE',{
+  weekday:'long', day:'numeric', month:'long', year:'numeric'
+});
+</script>
+</body>
+</html>
